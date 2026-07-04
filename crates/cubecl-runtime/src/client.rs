@@ -229,7 +229,9 @@ impl<R: Runtime> ComputeClient<R> {
                         alloc.strides.clone(),
                         desc.elem_size,
                     ),
-                    Bytes::from_bytes_vec(data.to_vec()),
+                    // `data` is already an owned Vec; re-copying it would double
+                    // the host-side cost of every upload.
+                    Bytes::from_bytes_vec(data),
                 )
             })
             .collect::<Vec<_>>();
@@ -265,7 +267,10 @@ impl<R: Runtime> ComputeClient<R> {
                         layout.strides.clone(),
                         desc.elem_size,
                     ),
-                    Bytes::from_bytes_vec(data.to_vec()),
+                    // `Bytes` is `Send`; copying it into a fresh Vec here would
+                    // add a full-size host copy to every upload (and strip the
+                    // pinned/shared property of the caller's buffer).
+                    data,
                 )
             })
             .collect::<Vec<_>>();
